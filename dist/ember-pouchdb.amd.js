@@ -113,7 +113,7 @@ define("ember-pouchdb/promise_tracker",
       },
       newPromise: function(callback) {
         // save a reference to it in the tracker and return a new promise
-        var promise = Ember.RSVP.Promise(callback);
+        var promise = new Ember.RSVP.Promise(callback);
         this.pushObject(promise);
         return promise;
       },
@@ -192,7 +192,7 @@ define("ember-pouchdb/storage",
               }
             });
           };
-          new Pouch(name, options, _createDB);
+          new PouchDB(name, options, _createDB);
         };
 
         return this._newPromise(createDB);
@@ -217,8 +217,7 @@ define("ember-pouchdb/storage",
         options.docType = docType;
 
         var that = this;
-
-        var findByDocType = function(doc) {
+        var findByDocType = function(doc, emit) {
           if (doc.docType === options.docType) {
             emit(doc._id, doc);
           }
@@ -419,6 +418,8 @@ define("ember-pouchdb/storage",
           _id: model.get('id'),
           _rev: model.get('rev')
         };
+    
+        var that = this;
 
         var removeDoc = function(db){
           var promise = that._newPromise(function(resolve, reject){
@@ -460,7 +461,7 @@ define("ember-pouchdb/storage",
               }          
             });
           };
-          Pouch.destroy(dbName, _removeDB);
+          PouchDB.destroy(dbName, _removeDB);
         };
 
         return this._newPromise(removeDB);
