@@ -439,45 +439,88 @@ define("ember-pouchdb/storage",
       },
       /**
        * Create a new document and let PouchDB generate an _id for it.
-       * 
-       * @param {PunchModel} model    instance of a decendant of PunchModel
-       * @param {object} options      object with options      
+       * If model is an array, all documents will inserted and the completed array (with _id) will be returned
+       *
+       * @param {PunchModel} model    Either an instance or an array of instances of descendant of PunchModel
+       * @param {object} options      object with options
        * @return {promise}            which will resolve to updated model
        */
       POST: function(model, options) {
         var
-          that          = this, 
-          doc           = model.serialize(),
-          docType       = this.getDocType(model.constructor);
+          that          = this;
 
-        Em.assert("Model doesn't have a corresponding doc type.", docType);
+        // Bulk insert
+        if(Em.isArray(model)) {
+          var docs = [];
+          model.forEach(function (item) {
+            var doc           = item.serialize(),
+              docType       = that.getDocType(item.constructor);
 
-        doc['docType'] = docType;
+            Em.assert("Model doesn't have a corresponding doc type.", docType);
+            doc['docType'] = docType;
+            item.set('docType', docType);
 
-        var postDoc = function(db){
-          var promise = that._newPromise(function(resolve, reject){
-            var _postDoc = function(error, response){
-              Ember.run(function(){
-                if ( error ) {
-                  reject(error);
-                } else {
-                  resolve(response);
-                }
-              });
-            };
-            db.post(doc, options, _postDoc);
+            docs.push(doc);
           });
-          return promise;
-        };
 
-        var addDocInfo = function(info) {
-          model.set('id', info.id);
-          model.set('rev', info.rev);
-          model.set('docType', docType);
-          return model;
-        };
+          var bulkDocs = function(db){
+            var promise = that._newPromise(function(resolve, reject){
+              var _bulkDocs = function(error, response){
+                Ember.run(function(){
+                  if ( error ) {
+                    reject(error);
+                  } else {
+                    resolve(response);
+                  }
+                });
+              };
+              db.bulkDocs(docs, options, _bulkDocs);
+            });
+            return promise;
+          };
 
-        return this.getDB().then(postDoc).then(addDocInfo);
+          var addAllDocInfo = function(info) {
+            info.forEach(function (item, index) {
+              model[index].set('id', item.id);
+              model[index].set('rev', item.rev);
+            });
+            return model;
+          };
+
+          return this.getDB().then(bulkDocs).then(addAllDocInfo);
+        } else {
+          var doc           = model.serialize(),
+            docType       = this.getDocType(model.constructor);
+
+          Em.assert("Model doesn't have a corresponding doc type.", docType);
+
+          doc['docType'] = docType;
+
+          var postDoc = function(db){
+            var promise = that._newPromise(function(resolve, reject){
+              var _postDoc = function(error, response){
+                Ember.run(function(){
+                  if ( error ) {
+                    reject(error);
+                  } else {
+                    resolve(response);
+                  }
+                });
+              };
+              db.post(doc, options, _postDoc);
+            });
+            return promise;
+          };
+
+          var addDocInfo = function(info) {
+            model.set('id', info.id);
+            model.set('rev', info.rev);
+            model.set('docType', docType);
+            return model;
+          };
+
+          return this.getDB().then(postDoc).then(addDocInfo);
+        }
       },
       /** 
        * Update an existing document.
