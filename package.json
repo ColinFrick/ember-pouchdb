@@ -30,6 +30,7 @@
     "karma-qunit": "~0.0.3",
     "karma-coverage": "~0.0.3",
     "karma-phantomjs-launcher": "~0.0.2",
+    "karma-coffee-preprocessor": "~0.1",
     "bower": "~1.2.7",
     "grunt": "~0.4.1",
     "grunt-browserify": "~1.0.5"
