@@ -148,9 +148,17 @@ define("ember-pouchdb/storage",
        * @type {Object}
        */
       docTypes: {},
+      /**
+       * Defines a remote couch, if set a bidirectional replication (sync) is initialised.
+       * Either a PouchDB instance or a string representing a CouchDB database URL or the name of a local PouchDB database
+       *
+       * @see http://pouchdb.com/api.html#replication
+       */
+      remoteCouch: null,
       init: function() {
         var that = this;
         this.getDB();
+        this.setupReplication();
       },
       getDB: function(dbName, options) {
         var that = this, promise = this.get('_dbPromise');
@@ -164,6 +172,23 @@ define("ember-pouchdb/storage",
           this.set('_dbPromise', promise);
         }
         return promise;
+      },
+      /**
+       * Initializes replication with a remoteCouch
+       */
+      setupReplication: function() {
+        if ( !Em.isEmpty(this.get('remoteCouch')) ) {
+          this.set('_replication', PouchDB.sync(this.get('dbName'), this.get('remoteCouch'), {live: true}));
+        }
+      },
+      /**
+       * Cancel replication with the remoteCouch
+       */
+      cancelReplication: function() {
+        if(!Em.isEmpty(this.get('_replication'))) {
+          this.get('_replication').cancel();
+          this.set('_replication', null);
+        }
       },
       /**
        * Create database by name
