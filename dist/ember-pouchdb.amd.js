@@ -292,69 +292,48 @@ define("ember-pouchdb/storage",
       /**
        * Executes a query.
        *
-       * @param {string} docType
        * @param {function} fun
        * @param {object} options
-       * @param {object} reduce
        * @return {promise}
        */
-      query: function(docType, fun, options, reduce) {
-        var modelClass = this.get('docTypes.'+docType);
-        Ember.assert("You have to register %@ docType before you can query by it. Look at docTypes property in PouchStorage class.".fmt(docType), modelClass);
-        Ember.assert("You have to pass a function which has two arguments: doc and emit. See http://pouchdb.com/api.html#query_database.", Ember.typeOf(fun) == "function");
+      query: function(fun, options) {
+        var that = this;
 
         if ( typeof options === 'undefined' ) {
           options = {
           };
         }
-        if(typeof reduce !== 'function' && typeof reduce !== 'string') {
-          options.reduce = false;
-          options.include_docs = true;
-        }
+        options.reduce = false;
+        options.include_docs = true;
 
-        options.docType = docType;
-
-        var that = this;
-        var findByDocType = function(doc, emit) {
-          if (doc.docType === options.docType) {
-            fun.apply(null, [doc, emit]);
-          }
-        };
-
-        var queryByDocType = function(db){
-          var promise = that._newPromise(function(resolve, reject){
-            var _queryByDocType = function(error, response){
-              Ember.run(function(){
-                if ( error ) {
+        var query = function(db){
+          return that._newPromise(function (resolve, reject) {
+            var _query = function (error, response) {
+              Ember.run(function () {
+                if (error) {
                   reject(error);
                 } else {
                   resolve(response);
                 }
               });
             };
-            if(options.reduce !== false) {
-              db.query({map: findByDocType, reduce: reduce}, options, _queryByDocType);
-            } else {
-              db.query({map: findByDocType}, options, _queryByDocType);
-            }
-
+            db.query(fun, options, _query);
           });
-          return promise;
         };
 
         var createModels = function(docs) {
-          if(options.reduce !== false) {
-            return docs.rows.length > 0 ? docs.rows[0].value : null;
-          } else {
-            return Em.A(docs.rows).map(function(doc){
-              var model = modelClass.create(doc.doc);
-              model.setProperties({id:doc.doc._id, rev:doc.doc._rev});
-              return model;
-            });
-          }
+          return Em.A(docs.rows).map(function(row){
+            var
+              doc = row.doc,
+              modelClass = that.get('docTypes.'+doc.docType);
+            Ember.assert("You have to register %@ docType before you can query by it. Look at docTypes property in PouchStorage class.".fmt(doc.docType), modelClass);
+            var model = modelClass.create(doc);
+            model.setProperties({id:doc._id, rev:doc._rev});
+            return model;
+          });
         };
 
-        return this.getDB().then(queryByDocType).then(createModels);
+        return this.getDB().then(query).then(createModels);
       },
       /**
        * Get a document by id, return a promise that will resolve to an instance of PouchModel
