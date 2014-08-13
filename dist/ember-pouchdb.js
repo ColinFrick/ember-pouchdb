@@ -276,12 +276,13 @@ define("ember-pouchdb/storage",
           };
         }
 
+        options.include_docs = true;
         options.docType = docType;
 
         var that = this;
         var findByDocType = function(doc, emit) {
           if (doc.docType === options.docType) {
-            emit(doc._id, doc);
+            emit(doc._id);
           }
         };
 
@@ -303,8 +304,8 @@ define("ember-pouchdb/storage",
 
         var createModels = function(docs) {
           return Em.A(docs.rows).map(function(doc){
-            var model = modelClass.create(doc.value);
-            model.setProperties({id:doc.value._id, rev:doc.value._rev});
+            var model = modelClass.create(doc.doc);
+            model.setProperties({id:doc.doc._id, rev:doc.doc._rev});
             return model;
           });
         };
@@ -331,6 +332,7 @@ define("ember-pouchdb/storage",
         }
         if(typeof reduce !== 'function' && typeof reduce !== 'string') {
           options.reduce = false;
+          options.include_docs = true;
         }
 
         options.docType = docType;
@@ -368,8 +370,8 @@ define("ember-pouchdb/storage",
             return docs.rows.length > 0 ? docs.rows[0].value : null;
           } else {
             return Em.A(docs.rows).map(function(doc){
-              var model = modelClass.create(doc.value);
-              model.setProperties({id:doc.value._id, rev:doc.value._rev});
+              var model = modelClass.create(doc.doc);
+              model.setProperties({id:doc.doc._id, rev:doc.doc._rev});
               return model;
             });
           }
