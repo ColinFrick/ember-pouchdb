@@ -196,6 +196,11 @@ define("ember-pouchdb/storage",
         var that = this;
         this.getDB();
         this.setupReplication();
+
+        // Add basic "by_doctype" view
+        db.put(this.createDesignDoc('by_doctype', function (doc) {
+          emit(doc.docType);
+        }));
       },
       getDB: function(dbName, options) {
         var that = this, promise = this.get('_dbPromise');
@@ -209,6 +214,21 @@ define("ember-pouchdb/storage",
           this.set('_dbPromise', promise);
         }
         return promise;
+      },
+      /**
+       * Create new design doc (http://pouchdb.com/2014/05/01/secondary-indexes-have-landed-in-pouchdb.html)
+       * @param name Name of the view
+       * @param mapFunction Map Function
+       * @returns {{_id: string, views: {}}}
+       */
+      createDesignDoc: function (name, mapFunction) {
+        var ddoc = {
+          _id: '_design/' + name,
+          views: {
+          }
+        };
+        ddoc.views[name] = { map: mapFunction.toString() };
+        return ddoc;
       },
       /**
        * Initializes replication with a remoteCouch
@@ -280,12 +300,6 @@ define("ember-pouchdb/storage",
         options.docType = docType;
 
         var that = this;
-        var findByDocType = function(doc, emit) {
-          if (doc.docType === options.docType) {
-            emit(doc._id);
-          }
-        };
-
         var queryByDocType = function(db){
           var promise = that._newPromise(function(resolve, reject){
             var _queryByDocType = function(error, response){
@@ -297,7 +311,7 @@ define("ember-pouchdb/storage",
                 }
               });
             };
-            db.query({map: findByDocType}, options, _queryByDocType);     
+            db.query("by_doctype", options, _queryByDocType);
           });
           return promise;
         };
