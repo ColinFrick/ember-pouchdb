@@ -161,9 +161,11 @@ define("ember-pouchdb/storage",
         this.setupReplication();
 
         // Add basic "by_doctype" view
-        db.put(this.createDesignDoc('by_doctype', function (doc) {
-          emit(doc.docType);
-        }));
+        this.getDB().then(function(db) {
+          db.put(that.createDesignDoc('by_doctype', function (doc) {
+            emit(doc.docType);
+          }));
+        });
       },
       getDB: function(dbName, options) {
         var that = this, promise = this.get('_dbPromise');
@@ -260,7 +262,7 @@ define("ember-pouchdb/storage",
         }
 
         options.include_docs = true;
-        options.docType = docType;
+        options.key = docType;
 
         var that = this;
         var queryByDocType = function(db){
