@@ -531,7 +531,7 @@ define("ember-pouchdb/storage",
         return this.getDB().then(putDoc).then(updateModel);
       },
       /** 
-       * Delete document for a model
+       * Delete document(s) for a model or an array of models
        * 
        * @param {model} model   must have id & rev properties
        * @param {object} options 
@@ -545,11 +545,23 @@ define("ember-pouchdb/storage",
           options = {};
         }
 
-        doc = {
-          _id: model.get('id'),
-          _rev: model.get('rev')
-        };
-    
+        // Bulk delete
+        if(Em.isArray(model)) {
+          doc = [];
+          model.forEach(function(item) {
+            doc.push({
+              _id: item.get('id'),
+              _rev: item.get('rev'),
+              _deleted: true
+            })
+          });
+        } else {
+          doc = {
+            _id: model.get('id'),
+            _rev: model.get('rev')
+          };
+        }
+
         var that = this;
 
         var removeDoc = function(db){
@@ -563,7 +575,11 @@ define("ember-pouchdb/storage",
                 }
               });
             };
-            db.remove(doc, options, _removeDoc);
+            if(Em.isArray(doc)) {
+              db.bulkDocs(doc, options, _removeDoc);
+            } else {
+              db.remove(doc, options, _removeDoc);
+            }
           });
           return promise;
         };
@@ -589,7 +605,7 @@ define("ember-pouchdb/storage",
                 reject(error);
               } else {
                 resolve(info);
-              }          
+              }
             });
           };
           PouchDB.destroy(dbName, _removeDB);
