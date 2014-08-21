@@ -158,7 +158,10 @@ define("ember-pouchdb/storage",
       init: function() {
         var that = this;
         this.getDB();
-        this.setupReplication();
+
+        if ( !Em.isEmpty(this.get('remoteCouch')) ) {
+          this.setupReplication(this.get('remoteCouch'));
+        }
 
         // Add basic "by_doctype" view
         this.getDB().then(function(db) {
@@ -197,11 +200,11 @@ define("ember-pouchdb/storage",
       },
       /**
        * Initializes replication with a remoteCouch
+       * @param remoteCouch Remote CouchDB (or supported) instance
        */
-      setupReplication: function() {
-        if ( !Em.isEmpty(this.get('remoteCouch')) ) {
-          this.set('_replication', PouchDB.sync(this.get('dbName'), this.get('remoteCouch'), {live: true}));
-        }
+      setupReplication: function(remoteCouch) {
+        Em.assert("No remote couch specified.", remoteCouch);
+        this.set('_replication', PouchDB.sync(this.get('dbName'), remoteCouch, {live: true}));
       },
       /**
        * Cancel replication with the remoteCouch
